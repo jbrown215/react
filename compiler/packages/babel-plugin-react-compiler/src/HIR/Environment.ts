@@ -660,6 +660,13 @@ const testComplexConfigDefaults: PartialEnvironmentConfig = {
       },
       numRequiredArgs: 2,
     },
+    {
+      function: {
+        source: 'useEffectWrapper',
+        importSpecifierName: 'default',
+      },
+      numRequiredArgs: 1,
+    },
   ],
 };
 
