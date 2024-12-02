@@ -98,6 +98,17 @@ export function inferEffectDependencies(fn: HIRFunction): void {
           }
         }
       } else if (
+        value.kind === 'LoadGlobal' &&
+        value.binding.kind === 'ImportDefault'
+      ) {
+        const moduleTargets = autodepFnConfigs.get(value.binding.module);
+        if (moduleTargets != null) {
+          const numRequiredArgs = moduleTargets.get('default');
+          if (numRequiredArgs != null) {
+            autodepFnLoads.set(lvalue.identifier.id, numRequiredArgs);
+          }
+        }
+      } else if (
         /*
          * TODO: Handle method calls
          */
