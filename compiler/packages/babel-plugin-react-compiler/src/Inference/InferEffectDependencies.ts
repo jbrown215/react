@@ -55,6 +55,16 @@ export function inferEffectDependencies(fn: HIRFunction): void {
     {pruned: boolean; deps: ReactiveScopeDependencies; hasSingleInstr: boolean}
   >();
 
+  const outlinedFunctionNames = new Set<string>();
+  for (const outlinedFn of fn.env.getOutlinedFunctions()) {
+    CompilerError.invariant(outlinedFn.fn.id != null, {
+      reason: 'Expected outlined function to have an id',
+      loc: outlinedFn.fn.loc,
+    });
+    outlinedFunctionNames.add(outlinedFn.fn.id);
+  }
+  const outlinedFunctionLoads = new Set<IdentifierId>();
+
   /**
    * When inserting LoadLocals, we need to retain the reactivity of the base
    * identifier, as later passes e.g. PruneNonReactiveDeps take the reactivity of
@@ -110,6 +120,14 @@ export function inferEffectDependencies(fn: HIRFunction): void {
           }
         }
       } else if (
+        value.kind === 'LoadGlobal' &&
+        value.binding.kind === 'Global'
+      ) {
+        const name = value.binding.name;
+        if (outlinedFunctionNames.has(name)) {
+          outlinedFunctionLoads.add(lvalue.identifier.id);
+        }
+      } else if (
         /*
          * TODO: Handle method calls
          */
@@ -117,8 +135,19 @@ export function inferEffectDependencies(fn: HIRFunction): void {
         autodepFnLoads.get(value.callee.identifier.id) === value.args.length &&
         value.args[0].kind === 'Identifier'
       ) {
+        const effectDeps: Array<Place> = [];
+        const newInstructions: Array<Instruction> = [];
+        const deps: ArrayExpression = {
+          kind: 'ArrayExpression',
+          elements: effectDeps,
+          loc: GeneratedSource,
+        };
+        const depsPlace = createTemporaryPlace(fn.env, GeneratedSource);
+        depsPlace.effect = Effect.Read;
+
         const fnExpr = fnExpressions.get(value.args[0].identifier.id);
         if (fnExpr != null) {
+          // We have a function expression, so we can infer its dependencies
           const scopeInfo =
             fnExpr.lvalue.identifier.scope != null
               ? scopeInfos.get(fnExpr.lvalue.identifier.scope.id)
@@ -140,14 +169,12 @@ export function inferEffectDependencies(fn: HIRFunction): void {
           }
 
           /**
-           * Step 1: write new instructions to insert a dependency array
+           * Step 1: push dependencies to the effect deps array
            *
            * Note that it's invalid to prune non-reactive deps in this pass, see
            * the `infer-effect-deps/pruned-nonreactive-obj` fixture for an
            * explanation.
            */
-          const effectDeps: Array<Place> = [];
-          const newInstructions: Array<Instruction> = [];
           for (const dep of scopeInfo.deps) {
             const {place, instructions} = writeDependencyToInstructions(
               dep,
@@ -158,14 +185,6 @@ export function inferEffectDependencies(fn: HIRFunction): void {
             newInstructions.push(...instructions);
             effectDeps.push(place);
           }
-          const deps: ArrayExpression = {
-            kind: 'ArrayExpression',
-            elements: effectDeps,
-            loc: GeneratedSource,
-          };
-
-          const depsPlace = createTemporaryPlace(fn.env, GeneratedSource);
-          depsPlace.effect = Effect.Read;
 
           newInstructions.push({
             id: makeInstructionId(0),
@@ -175,6 +194,16 @@ export function inferEffectDependencies(fn: HIRFunction): void {
           });
 
           // Step 2: push the inferred deps array as an argument of the useEffect
+          value.args.push({...depsPlace, effect: Effect.Freeze});
+          rewriteInstrs.set(instr.id, newInstructions);
+        } else if (outlinedFunctionLoads.has(value.args[0].identifier.id)) {
+          // We outlined the function expression, so we know it has no dependencies
+          newInstructions.push({
+            id: makeInstructionId(0),
+            loc: GeneratedSource,
+            lvalue: {...depsPlace, effect: Effect.Mutate},
+            value: deps,
+          });
           value.args.push({...depsPlace, effect: Effect.Freeze});
           rewriteInstrs.set(instr.id, newInstructions);
         }
