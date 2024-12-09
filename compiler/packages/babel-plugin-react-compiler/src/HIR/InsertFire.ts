@@ -1,3 +1,4 @@
+import {CompilerError, ErrorSeverity} from '..';
 import {
   BlockId,
   CallExpression,
@@ -67,7 +68,11 @@ function rewriteInstructions(
  * N LoadLocal args ...
  * 2. CallExpr 1, [N LoadLocal args ...]
  */
-function findFireCalleeLoads(fn: HIRFunction, callees: Set<LoadLocal>): void {
+function findFireCalleeLoads(
+  fn: HIRFunction,
+  callees: Set<LoadLocal>,
+  errors: CompilerError,
+): void {
   const callExpressions = new Map<IdentifierId, CallExpression>();
   const loadLocals = new Map<IdentifierId, LoadLocal>();
   for (const [, block] of fn.body.blocks) {
@@ -89,26 +94,43 @@ function findFireCalleeLoads(fn: HIRFunction, callees: Set<LoadLocal>): void {
             if (callExpr != null) {
               const loadLocal = loadLocals.get(callExpr.callee.identifier.id);
               if (loadLocal == null) {
-                // TODO: INVARIANT VIOLATION, NO LOCALLOAD FOR CALLEXPR CALLEE!
+                errors.push({
+                  loc: value.loc,
+                  description: null,
+                  severity: ErrorSeverity.Invariant,
+                  reason: 'No loadLocal found for fire call argument',
+                  suggestions: null,
+                });
                 continue;
               }
               callees.add(loadLocal);
               // Delete the fire call expression
               deleteInstrs.add(instr.id);
             } else {
-              /*
-               * INVARIANT VIOLATION OR SYNTAX ERROR?
-               * There was no call expr passed to the fire call, which is invalid syntax
-               */
+              errors.push({
+                loc: value.loc,
+                description: null,
+                severity: ErrorSeverity.InvalidReact,
+                reason:
+                  'fire() only allows for a call expression to be passed as an argument',
+                suggestions: null,
+              });
             }
           } else {
-            // REPORT AN ERROR! There was a spread arg passed to the fire call
+            errors.push({
+              loc: value.loc,
+              description: null,
+              severity: ErrorSeverity.InvalidReact,
+              reason:
+                'fire() only allows for a single call expression to be passed as an argument, got a spread argument or multiple arguments',
+              suggestions: null,
+            });
           }
         } else {
           callExpressions.set(lvalue.identifier.id, value);
         }
       } else if (value.kind === 'FunctionExpression') {
-        findFireCalleeLoads(value.loweredFunc.func, callees);
+        findFireCalleeLoads(value.loweredFunc.func, callees, errors);
       } else if (value.kind === 'LoadLocal') {
         loadLocals.set(lvalue.identifier.id, value);
       } else if (
@@ -273,6 +295,8 @@ function makeUseFireInstructions(
 }
 
 export function insertFire(fn: HIRFunction, env: Environment): void {
+  const errors = new CompilerError();
+
   const fnExpressions = new Map<
     IdentifierId,
     {blockId: BlockId; instrId: InstructionId; func: FunctionExpression}
@@ -305,7 +329,11 @@ export function insertFire(fn: HIRFunction, env: Environment): void {
         const fnExpr = fnExpressions.get(value.args[0].identifier.id);
         if (fnExpr != null) {
           const fireCalleeLoads = new Set<LoadLocal>();
-          findFireCalleeLoads(fnExpr.func.loweredFunc.func, fireCalleeLoads);
+          findFireCalleeLoads(
+            fnExpr.func.loweredFunc.func,
+            fireCalleeLoads,
+            errors,
+          );
           if (fireCalleeLoads.size > 0) {
             const newInstrs: Array<Instruction> = [];
             const replacedLoadedCallees = new Map<IdentifierId, Place>();
@@ -327,9 +355,15 @@ export function insertFire(fn: HIRFunction, env: Environment): void {
                 loadFireCallee.place.identifier.id,
               );
               if (loadOfOriginalCapturedCallee == null) {
-                // INVARIANT VIOLATION!
-                console.log('INVARIANT VIOLATION');
-                return;
+                errors.push({
+                  loc: value.loc,
+                  description: null,
+                  severity: ErrorSeverity.Invariant,
+                  reason:
+                    'Could not find the laod for the captured fire callee',
+                  suggestions: null,
+                });
+                continue;
               }
 
               const replacedCallee = replacedLoadedCallees.get(
@@ -380,8 +414,7 @@ export function insertFire(fn: HIRFunction, env: Environment): void {
                   replaceContextValueIndex < 0 ||
                   replaceContextValueIndex < 0
                 ) {
-                  // INVARIANT VIOLATION!
-                  console.log('INVARIANT VIOLATION');
+                  // INVARIANT VIOLATION! DEPS/CONTEXT NOT PRESENT
                   return;
                 }
 
@@ -406,4 +439,8 @@ export function insertFire(fn: HIRFunction, env: Environment): void {
   }
 
   markInstructionIds(fn.body);
+
+  if (errors.hasErrors()) {
+    throw errors;
+  }
 }
