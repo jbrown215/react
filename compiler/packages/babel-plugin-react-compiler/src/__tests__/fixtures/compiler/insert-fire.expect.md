@@ -2,6 +2,7 @@
 ## Input
 
 ```javascript
+// @enableFire
 import {fire} from 'react';
 
 function Component({props, bar}) {
@@ -22,7 +23,7 @@ function Component({props, bar}) {
 ## Code
 
 ```javascript
-import { c as _c } from "react/compiler-runtime";
+import { c as _c } from "react/compiler-runtime"; // @enableFire
 import { fire } from "react";
 
 function Component(t0) {

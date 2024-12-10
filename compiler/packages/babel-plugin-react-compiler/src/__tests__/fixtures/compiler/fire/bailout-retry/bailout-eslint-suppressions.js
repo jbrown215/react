@@ -1,5 +1,5 @@
 // @enableFire
-import {fire} from 'react';
+import {useRef} from 'react';
 
 function Component({props, bar}) {
   const foo = () => {
@@ -11,5 +11,8 @@ function Component({props, bar}) {
     fire(bar());
   });
 
-  return null;
+  const ref = useRef(null);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  ref.current = 'bad';
+  return <button ref={ref} />;
 }

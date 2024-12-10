@@ -2,6 +2,7 @@
 ## Input
 
 ```javascript
+// @enableFire
 import {fire} from 'react';
 
 function Component({props, bar}) {
@@ -24,19 +25,19 @@ function Component({props, bar}) {
 ## Error
 
 ```
-   6 |   };
-   7 |   useEffect(() => {
->  8 |     fire(foo(props), bar);
-     |     ^^^^^^^^^^^^^^^^^^^^^ InvalidReact: fire() only allows for a single call expression to be passed as an argument, got a spread argument or multiple arguments (8:8)
+   7 |   };
+   8 |   useEffect(() => {
+>  9 |     fire(foo(props), bar);
+     |     ^^^^^^^^^^^^^^^^^^^^^ InvalidReact: fire() only allows for a single call expression to be passed as an argument, got a spread argument or multiple arguments (9:9)
 
-InvalidReact: fire() only allows for a single call expression to be passed as an argument, got a spread argument or multiple arguments (9:9)
-
-InvalidReact: fire() only allows for a call expression to be passed as an argument (10:10)
+InvalidReact: fire() only allows for a single call expression to be passed as an argument, got a spread argument or multiple arguments (10:10)
 
 InvalidReact: fire() only allows for a call expression to be passed as an argument (11:11)
-   9 |     fire(...foo);
-  10 |     fire(bar);
-  11 |     fire(props.foo());
+
+InvalidReact: fire() only allows for a call expression to be passed as an argument (12:12)
+  10 |     fire(...foo);
+  11 |     fire(bar);
+  12 |     fire(props.foo());
 ```
           
       
