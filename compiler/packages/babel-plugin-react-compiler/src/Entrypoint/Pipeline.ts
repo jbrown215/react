@@ -165,7 +165,8 @@ function* runWithEnvironment(
   if (
     !env.config.enablePreserveExistingManualUseMemo &&
     !env.config.disableMemoizationForDebugging &&
-    !env.config.enableChangeDetectionForDebugging
+    !env.config.enableChangeDetectionForDebugging &&
+    !env.config.enableMinimalTransformsForRetry
   ) {
     dropManualMemoization(hir);
     yield log({kind: 'hir', name: 'DropManualMemoization', value: hir});
@@ -198,7 +199,9 @@ function* runWithEnvironment(
   inferTypes(hir);
   yield log({kind: 'hir', name: 'InferTypes', value: hir});
 
-  insertFire(hir, env);
+  if (env.config.enableFire) {
+    insertFire(hir, env);
+  }
 
   if (env.config.validateHooksUsage) {
     validateHooksUsage(hir);
@@ -272,9 +275,10 @@ function* runWithEnvironment(
     value: hir,
   });
 
-  inferReactiveScopeVariables(hir);
-  yield log({kind: 'hir', name: 'InferReactiveScopeVariables', value: hir});
-
+  if (!env.config.enableMinimalTransformsForRetry) {
+    inferReactiveScopeVariables(hir);
+    yield log({kind: 'hir', name: 'InferReactiveScopeVariables', value: hir});
+  }
   const fbtOperands = memoizeFbtAndMacroOperandsInSameScope(hir);
   yield log({
     kind: 'hir',

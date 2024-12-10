@@ -277,6 +277,8 @@ const EnvironmentConfigSchema = z.object({
     )
     .default(null),
 
+  enableFire: z.boolean().default(false),
+
   /**
    * Enables inlining ReactElement object literals in place of JSX
    * An alternative to the standard JSX transform which replaces JSX with React's jsxProd() runtime
@@ -530,6 +532,8 @@ const EnvironmentConfigSchema = z.object({
    * original source will be disabled as well.
    */
   disableMemoizationForDebugging: z.boolean().default(false),
+
+  enableMinimalTransformsForRetry: z.boolean().default(false),
 
   /**
    * When true, rather using memoized values, the compiler will always re-compute
