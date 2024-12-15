@@ -564,6 +564,13 @@ export function compileProgram(
     if (environment.enableChangeDetectionForDebugging != null) {
       externalFunctions.push(environment.enableChangeDetectionForDebugging);
     }
+
+    const hasFireRewrite = compiledFns.some(c => c.compiledFn.hasFireRewrite);
+    if (environment.enableFire && hasFireRewrite) {
+      externalFunctions.push({source: 'react', importSpecifierName: 'useFire'});
+    }
+
+    // If we have a useFire and fire is enabled push the fire function
   } catch (err) {
     handleError(err, pass, null);
     return;

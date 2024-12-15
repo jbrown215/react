@@ -18,6 +18,7 @@ import {
   assertValidBlockNesting,
   assertValidMutableRanges,
   buildReactiveScopeTerminalsHIR,
+  insertFire,
   lower,
   mergeConsecutiveBlocks,
   mergeOverlappingReactiveScopesHIR,
@@ -197,6 +198,10 @@ function* runWithEnvironment(
 
   inferTypes(hir);
   yield log({kind: 'hir', name: 'InferTypes', value: hir});
+
+  if (env.config.enableFire) {
+    insertFire(hir);
+  }
 
   if (env.config.validateHooksUsage) {
     validateHooksUsage(hir);

@@ -34,3 +34,4 @@ export {mergeConsecutiveBlocks} from './MergeConsecutiveBlocks';
 export {mergeOverlappingReactiveScopesHIR} from './MergeOverlappingReactiveScopesHIR';
 export {printFunction, printHIR} from './PrintHIR';
 export {pruneUnusedLabelsHIR} from './PruneUnusedLabelsHIR';
+export {insertFire} from './InsertFire';
