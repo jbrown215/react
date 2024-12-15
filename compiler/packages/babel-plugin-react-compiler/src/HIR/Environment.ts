@@ -240,7 +240,7 @@ const EnvironmentConfigSchema = z.object({
    * the dependency.
    */
   enableOptionalDependencies: z.boolean().default(true),
-  
+
   enableFire: z.boolean().default(false),
 
   /**

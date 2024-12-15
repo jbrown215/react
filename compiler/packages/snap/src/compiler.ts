@@ -131,7 +131,7 @@ function makePluginOptions(
   if (firstLine.includes('@enableFire')) {
     enableFire = true;
   }
-  
+
   const hookPatternMatch = /@hookPattern:"([^"]+)"/.exec(firstLine);
   if (
     hookPatternMatch &&
