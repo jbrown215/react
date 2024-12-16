@@ -12,6 +12,7 @@ import {
   SourceLocation,
 } from '..';
 import {
+  ArrayExpression,
   CallExpression,
   Effect,
   Environment,
@@ -38,7 +39,6 @@ import {printSourceLocationLine} from '../HIR/PrintHIR';
 
 /*
  * TODO(jmbrown):
- *   - rewrite dep arrays
  *   - traverse object methods
  *   - method calls
  */
@@ -246,6 +246,12 @@ class Context {
    */
   #loadGlobalInstructionIds = new Map<IdentifierId, InstructionId>();
 
+  /*
+   * We keep track of array expressions so we can rewrite dependency arrays passed to useEffect
+   * to use the fire functions
+   */
+  #arrayExpressions = new Map<IdentifierId, ArrayExpression>();
+
   pushError(error: CompilerErrorDetailOptions): void {
     this.#errors.push(error);
   }
@@ -352,6 +358,14 @@ class Context {
 
   getLoadGlobalInstrId(id: IdentifierId): InstructionId | undefined {
     return this.#loadGlobalInstructionIds.get(id);
+  }
+
+  addArrayExpression(id: IdentifierId, array: ArrayExpression): void {
+    this.#arrayExpressions.set(id, array);
+  }
+
+  getArrayExpression(id: IdentifierId): ArrayExpression | undefined {
+    return this.#arrayExpressions.get(id);
   }
 
   hasErrors(): boolean {
@@ -527,6 +541,44 @@ function replaceFireFunctions(fn: HIRFunction, context: Context): void {
             context,
             capturedCallees,
           );
+
+          if (
+            value.args.length > 1 &&
+            value.args[1] != null &&
+            value.args[1].kind === 'Identifier'
+          ) {
+            const depArray = value.args[1];
+            const depArrayExpression = context.getArrayExpression(
+              depArray.identifier.id,
+            );
+            if (depArrayExpression != null) {
+              for (const dependency of depArrayExpression.elements) {
+                if (dependency.kind === 'Identifier') {
+                  const loadOfDependency = context.getLoadLocalInstr(
+                    dependency.identifier.id,
+                  );
+                  if (loadOfDependency != null) {
+                    const replacedDepArrayItem = capturedCallees.get(
+                      loadOfDependency.place.identifier.id,
+                    );
+                    if (replacedDepArrayItem != null) {
+                      loadOfDependency.place =
+                        replacedDepArrayItem.fireFunctionBinding;
+                    }
+                  }
+                }
+              }
+            } else {
+              context.pushError({
+                loc: value.loc,
+                description:
+                  'You must use an array literal for an effect dependency array when that effect uses `fire()`',
+                severity: ErrorSeverity.Invariant,
+                reason: CANNOT_COMPILE_FIRE,
+                suggestions: null,
+              });
+            }
+          }
         }
       } else if (
         value.kind === 'CallExpression' &&
@@ -628,6 +680,8 @@ function replaceFireFunctions(fn: HIRFunction, context: Context): void {
         deleteInstrs.add(instr.id);
       } else if (value.kind === 'LoadGlobal') {
         context.addLoadGlobalInstrId(lvalue.identifier.id, instr.id);
+      } else if (value.kind === 'ArrayExpression') {
+        context.addArrayExpression(lvalue.identifier.id, value);
       }
     }
     block.instructions = rewriteInstructions(rewriteInstrs, block.instructions);
