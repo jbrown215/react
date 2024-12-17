@@ -6,13 +6,12 @@
 import {fire} from 'react';
 
 function Component(props) {
-  const foo = () => {
+  const foo = props => {
     console.log(props);
   };
   useEffect(() => {
     fire(foo(props));
-    fire(foo(props));
-  });
+  }, [foo, props]);
 
   return null;
 }
@@ -27,33 +26,29 @@ import { c as _c } from "react/compiler-runtime"; // @enableFire
 import { fire } from "react";
 
 function Component(props) {
-  const $ = _c(5);
-  let t0;
-  if ($[0] !== props) {
-    t0 = () => {
-      console.log(props);
+  const $ = _c(4);
+  const foo = _temp;
+  const t0 = useFire(foo);
+  let t1;
+  let t2;
+  if ($[0] !== props || $[1] !== t0) {
+    t1 = () => {
+      t0(props);
     };
+    t2 = [t0, props];
     $[0] = props;
     $[1] = t0;
+    $[2] = t1;
+    $[3] = t2;
   } else {
-    t0 = $[1];
+    t1 = $[2];
+    t2 = $[3];
   }
-  const foo = t0;
-  const t1 = useFire(foo);
-  let t2;
-  if ($[2] !== props || $[3] !== t1) {
-    t2 = () => {
-      t1(props);
-      t1(props);
-    };
-    $[2] = props;
-    $[3] = t1;
-    $[4] = t2;
-  } else {
-    t2 = $[4];
-  }
-  useEffect(t2);
+  useEffect(t1, t2);
   return null;
+}
+function _temp(props_0) {
+  console.log(props_0);
 }
 
 ```

@@ -2,15 +2,14 @@
 ## Input
 
 ```javascript
-// @enableFire
-import {fire} from 'react';
+// @enableFire @inferEffectDependencies
+import {fire, useEffect} from 'react';
 
 function Component(props) {
-  const foo = () => {
-    console.log(props);
+  const foo = arg => {
+    console.log(arg, props.bar);
   };
   useEffect(() => {
-    fire(foo(props));
     fire(foo(props));
   });
 
@@ -23,17 +22,17 @@ function Component(props) {
 
 ```javascript
 import { useFire } from "react";
-import { c as _c } from "react/compiler-runtime"; // @enableFire
-import { fire } from "react";
+import { c as _c } from "react/compiler-runtime"; // @enableFire @inferEffectDependencies
+import { fire, useEffect } from "react";
 
 function Component(props) {
   const $ = _c(5);
   let t0;
-  if ($[0] !== props) {
-    t0 = () => {
-      console.log(props);
+  if ($[0] !== props.bar) {
+    t0 = (arg) => {
+      console.log(arg, props.bar);
     };
-    $[0] = props;
+    $[0] = props.bar;
     $[1] = t0;
   } else {
     t0 = $[1];
@@ -44,7 +43,6 @@ function Component(props) {
   if ($[2] !== props || $[3] !== t1) {
     t2 = () => {
       t1(props);
-      t1(props);
     };
     $[2] = props;
     $[3] = t1;
@@ -52,7 +50,7 @@ function Component(props) {
   } else {
     t2 = $[4];
   }
-  useEffect(t2);
+  useEffect(t2, [t1, props]);
   return null;
 }
 
