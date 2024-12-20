@@ -23,6 +23,7 @@ import type {
 } from './ReactFiberTracingMarkerComponent';
 import type {OffscreenInstance} from './ReactFiberActivityComponent';
 import type {Resource} from './ReactFiberConfig';
+import type {RootState} from './ReactFiberRoot';
 
 import {
   enableCreateEventHandleAPI,
@@ -32,7 +33,6 @@ import {
   enableSchedulingProfiler,
   enableUpdaterTracking,
   enableTransitionTracing,
-  useModernStrictMode,
   disableLegacyContext,
   alwaysThrottleRetries,
   enableInfiniteRenderLoopDetection,
@@ -60,6 +60,7 @@ import {
   logRenderPhase,
   logInterruptedRenderPhase,
   logSuspendedRenderPhase,
+  logRecoveredRenderPhase,
   logErroredRenderPhase,
   logInconsistentRender,
   logSuspendedWithDelayPhase,
@@ -3184,6 +3185,19 @@ function commitRootImpl(
         completedRenderEndTime,
         lanes,
       );
+    } else if (recoverableErrors !== null) {
+      const hydrationFailed =
+        finishedWork !== null &&
+        finishedWork.alternate !== null &&
+        (finishedWork.alternate.memoizedState: RootState).isDehydrated &&
+        (finishedWork.flags & ForceClientRender) !== NoFlags;
+      logRecoveredRenderPhase(
+        completedRenderStartTime,
+        completedRenderEndTime,
+        lanes,
+        recoverableErrors,
+        hydrationFailed,
+      );
     } else {
       logRenderPhase(completedRenderStartTime, completedRenderEndTime, lanes);
     }
@@ -4205,7 +4219,7 @@ function commitDoubleInvokeEffectsInDEV(
   hasPassiveEffects: boolean,
 ) {
   if (__DEV__) {
-    if (useModernStrictMode && (disableLegacyMode || root.tag !== LegacyRoot)) {
+    if (disableLegacyMode || root.tag !== LegacyRoot) {
       let doubleInvokeEffects = true;
 
       if (

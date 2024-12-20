@@ -10,7 +10,6 @@
 import typeof * as FeatureFlagsType from 'shared/ReactFeatureFlags';
 import typeof * as ExportsType from './ReactFeatureFlags.test-renderer.www';
 
-export const debugRenderPhaseSideEffectsForStrictMode = __DEV__;
 export const enableAsyncDebugInfo = false;
 export const enableSchedulingProfiler = false;
 export const enableProfilerTimer = __PROFILE__;
@@ -54,7 +53,6 @@ export const enableLegacyHidden = false;
 
 export const enableTransitionTracing = false;
 
-export const useModernStrictMode = true;
 export const enableDO_NOT_USE_disableStrictPassiveEffect = false;
 export const enableFizzExternalRuntime = false;
 export const enableDeferRootSchedulingToMicrotask = true;
@@ -84,7 +82,7 @@ export const enableUseResourceEffectHook = false;
 
 export const enableHydrationLaneScheduling = true;
 
-export const enableYieldingBeforePassive = true;
+export const enableYieldingBeforePassive = false;
 
 // Flow magic to verify the exports of this file match the original version.
 ((((null: any): ExportsType): FeatureFlagsType): ExportsType);
