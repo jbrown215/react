@@ -37,6 +37,8 @@ export const {
   transitionLaneExpirationMs,
   enableOwnerStacks,
   enableRemoveConsolePatches,
+  enableFastAddPropertiesInDiffing,
+  enableViewTransition,
 } = dynamicFeatureFlags;
 
 // On WWW, __EXPERIMENTAL__ is used for a new modern build.
@@ -59,7 +61,6 @@ export const enableLegacyFBSupport = true;
 export const enableYieldingBeforePassive = false;
 
 export const enableThrottledScheduling = false;
-export const enableViewTransition = false;
 
 export const enableHydrationLaneScheduling = true;
 
