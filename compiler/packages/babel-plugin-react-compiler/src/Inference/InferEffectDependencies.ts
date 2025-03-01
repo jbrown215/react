@@ -15,6 +15,8 @@ import {
   ReactiveScopeDependency,
   Place,
   ReactiveScopeDependencies,
+  isUseRefType,
+  isSetStateType,
 } from '../HIR';
 import {DEFAULT_EXPORT} from '../HIR/Environment';
 import {
@@ -179,19 +181,25 @@ export function inferEffectDependencies(fn: HIRFunction): void {
           /**
            * Step 1: push dependencies to the effect deps array
            *
-           * Note that it's invalid to prune non-reactive deps in this pass, see
+           * Note that it's invalid to prune all non-reactive deps in this pass, see
            * the `infer-effect-deps/pruned-nonreactive-obj` fixture for an
            * explanation.
            */
           for (const dep of scopeInfo.deps) {
-            const {place, instructions} = writeDependencyToInstructions(
-              dep,
-              reactiveIds.has(dep.identifier.id),
-              fn.env,
-              fnExpr.loc,
-            );
-            newInstructions.push(...instructions);
-            effectDeps.push(place);
+            // If it is reactive OR it is not reactive and neither a ref or setState call, then we need to add it to the deps array
+            if (
+              reactiveIds.has(dep.identifier.id) ||
+              (!isUseRefType(dep.identifier) && !isSetStateType(dep.identifier))
+            ) {
+              const {place, instructions} = writeDependencyToInstructions(
+                dep,
+                reactiveIds.has(dep.identifier.id),
+                fn.env,
+                fnExpr.loc,
+              );
+              newInstructions.push(...instructions);
+              effectDeps.push(place);
+            }
           }
 
           newInstructions.push({
