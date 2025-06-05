@@ -707,12 +707,12 @@ describe('ReactDOMFloat', () => {
           ? '<script src="react-dom/unstable_server-external-runtime" async=""></script>'
           : '') +
         (gate(flags => flags.enableFizzBlockingRender)
-          ? '<link rel="expect" href="#«R»" blocking="render"/>'
+          ? '<link rel="expect" href="#_R_" blocking="render"/>'
           : '') +
         '<title>foo</title></head>' +
         '<body>bar' +
         (gate(flags => flags.enableFizzBlockingRender)
-          ? '<template id="«R»"></template>'
+          ? '<template id="_R_"></template>'
           : ''),
       '</body></html>',
     ]);
@@ -5755,7 +5755,7 @@ body {
         <html>
           <body>
             <Suspense fallback="loading...">
-              <SuspenseList revealOrder="forwards">
+              <SuspenseList revealOrder="forwards" tail="visible">
                 <Suspense fallback="loading foo...">
                   <BlockedOn value="foo">
                     <link rel="stylesheet" href="foo" precedence="foo" />
