@@ -90,6 +90,13 @@ export function inlineImmediatelyInvokedFunctionExpressions(
    */
   const queue = Array.from(fn.body.blocks.values());
   queue: for (const block of queue) {
+    /*
+     * We can't handle labels inside expressions yet, so we don't inline IIFEs if they are in a
+     * value block.
+     */
+    if (block.kind === 'value') {
+      continue queue;
+    }
     for (let ii = 0; ii < block.instructions.length; ii++) {
       const instr = block.instructions[ii]!;
       switch (instr.value.kind) {
