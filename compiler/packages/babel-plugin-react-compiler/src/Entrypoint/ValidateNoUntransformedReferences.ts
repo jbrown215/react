@@ -35,8 +35,41 @@ function throwInvalidReact(
   });
   CompilerError.throw(detail);
 }
+
+function isAutodepsSigil(
+  arg: NodePath<t.ArgumentPlaceholder | t.SpreadElement | t.Expression>,
+): boolean {
+  // Check for AUTODEPS identifier imported from React
+  if (arg.isIdentifier() && arg.node.name === 'AUTODEPS') {
+    const binding = arg.scope.getBinding(arg.node.name);
+    if (binding && binding.path.isImportSpecifier()) {
+      const importSpecifier = binding.path.node as t.ImportSpecifier;
+      if (importSpecifier.imported.type === 'Identifier') {
+        return (importSpecifier.imported as t.Identifier).name === 'AUTODEPS';
+      }
+    }
+    return false;
+  }
+
+  // Check for React.AUTODEPS member expression
+  if (arg.isMemberExpression() && !arg.node.computed) {
+    const object = arg.get('object');
+    const property = arg.get('property');
+
+    if (
+      object.isIdentifier() &&
+      object.node.name === 'React' &&
+      property.isIdentifier() &&
+      property.node.name === 'AUTODEPS'
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
 function assertValidEffectImportReference(
-  numArgs: number,
+  autodepsIndex: number,
   paths: Array<NodePath<t.Node>>,
   context: TraversalState,
 ): void {
@@ -53,7 +86,11 @@ function assertValidEffectImportReference(
        * or `moduleNamespace.useMyEffect(...)`, with matching argument counts.
        * TODO: do we also want a mode to also hard error on non-call references?
        */
-      if (args.length === numArgs && !hasInferredEffect) {
+      const autodepsArg = args[autodepsIndex];
+      if (
+        autodepsArg == null ||
+        (isAutodepsSigil(autodepsArg) && !hasInferredEffect)
+      ) {
         const maybeErrorDiagnostic = matchCompilerDiagnostic(
           path,
           context.transformErrors,
@@ -128,12 +165,12 @@ export default function validateNoUntransformedReferences(
   if (env.inferEffectDependencies) {
     for (const {
       function: {source, importSpecifierName},
-      numRequiredArgs,
+      autodepsIndex,
     } of env.inferEffectDependencies) {
       const module = getOrInsertWith(moduleLoadChecks, source, () => new Map());
       module.set(
         importSpecifierName,
-        assertValidEffectImportReference.bind(null, numRequiredArgs),
+        assertValidEffectImportReference.bind(null, autodepsIndex),
       );
     }
   }

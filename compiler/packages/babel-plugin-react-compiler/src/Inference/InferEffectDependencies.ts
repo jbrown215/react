@@ -79,7 +79,7 @@ export function inferEffectDependencies(fn: HIRFunction): void {
     );
     moduleTargets.set(
       effectTarget.function.importSpecifierName,
-      effectTarget.numRequiredArgs,
+      effectTarget.autodepsIndex,
     );
   }
   const autodepFnLoads = new Map<IdentifierId, number>();
@@ -183,6 +183,16 @@ export function inferEffectDependencies(fn: HIRFunction): void {
           autodepFnLoads.has(callee.identifier.id) &&
           value.args[0].kind === 'Identifier'
         ) {
+          const autodepsArgExpectedIndex = autodepFnLoads.get(
+            callee.identifier.id,
+          )!;
+          if (autodepsArgExpectedIndex !== autodepsArgIndex) {
+            CompilerError.throwInvalidReact({
+              reason: 'Invalid AUTODEPS',
+              description: `AUTODEPS was used at argument index ${autodepsArgIndex} but should have been used at index ${autodepsArgExpectedIndex}`,
+              loc: callee.loc,
+            });
+          }
           // We have a useEffect call with no deps array, so we need to infer the deps
           const effectDeps: Array<Place> = [];
           const deps: ArrayExpression = {
